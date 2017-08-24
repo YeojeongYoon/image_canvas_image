@@ -1,0 +1,41 @@
+<html>
+<body>
+    <div id="divCanvas"> <!-- set desired position and size to that div -->
+        <canvas id="mycanvas" style="position:absolute; width: 100%; height: 50%"></canvas>
+        <img id="png" src="/images/01.png" style="position:relative" />
+    </div>
+    <a href="javascript:;" onclick="copyCanvas()">copy Canvas</a>
+
+    <script src="/javascripts/img-touch-canvas.js"></script>
+    <script src="/javascripts/html2canvas.js"></script>
+    <script>
+
+      var mycanvas = document.getElementById('mycanvas');
+
+      var gesturableImg = new ImgTouchCanvas({
+          canvas: mycanvas,
+          path: "http://www.html5canvastutorials.com/demos/assets/darth-vader.jpg"
+      });
+
+      function draw(){
+        var img = new Image();
+        img.addEventListener('load', function(){
+          var ctx = mycanvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, 200, 200);
+        }, false);
+        img.src = "/images/02.png";
+        img
+      }
+
+      function copyCanvas(){
+        html2canvas(document.getElementById('divCanvas'), {
+             onrendered: function(canvas) {
+                // document.body.appendChild(canvas);
+              window.open(canvas.toDataURL('image/jpeg'));
+            }
+         });
+      }
+
+    </script>
+</body>
+</html>

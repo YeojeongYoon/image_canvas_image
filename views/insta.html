@@ -1,0 +1,283 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width">
+
+    <script src="/javascripts/jquery-3.1.1.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="http://my.acuvue.co.kr/css/myacuvue/reset.css" />
+    <link rel="stylesheet" type="text/css" href="http://my.acuvue.co.kr/css/myacuvue/basic.css" />
+    <link rel="stylesheet" type="text/css" href="http://my.acuvue.co.kr/css/myacuvue/myAcuvue.css" />
+    <link rel="stylesheet" type="text/css" href="http://my.acuvue.co.kr/css/myacuvue/style.css" />
+    <link rel="stylesheet" type="text/css" href="http://my.acuvue.co.kr/css/myacuvue/swiper.min.css" />
+    <link rel="stylesheet" type="text/css" href="http://my.acuvue.co.kr/css/myacuvue/campain.css" />
+    <link rel="stylesheet" type="text/css" href="http://my.acuvue.co.kr/css/myacuvue/font-awesome.min.css" />
+</head>
+<body>
+    <!--<script src="https://cdn.rawgit.com/hammerjs/touchemulator/master/touch-emulator.js"></script>
+    <script> TouchEmulator(); </script>-->
+    <script src="https://hammerjs.github.io/dist/hammer.js"></script>
+    <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+    <script src="https://cdn.rawgit.com/julianshapiro/velocity/master/velocity.min.js"></script>
+    <script src="/javascripts/html2canvas.js"></script>
+    <script src="/javascripts/load-image.all.min.js"></script>
+    <!--link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/3.x.x/css/swiper.min.css"-->
+    <div style="min-height: initial;">
+        <br />h5<br />h5<br />h5
+    </div>
+    <div id="divCanvas" class="device-screen-wrapper">
+        <div class="device-screen">
+            <div id="stage" class="stage"><div><img id="uploadImage" src="/images/picture.jpg" /></div></div>
+        </div>
+        <input type="text" class="acuvue-bg-text" value="" />
+        <img id="bg" src="/images/background.png" class="acuvue-bg" />
+    </div>
+    <br />
+    <input type="file" onchange="readURL2(event)" />
+    <br /><a href="javascript:;" onclick="$('.acuvue-bg-text').focus();">text insert</a>
+    <br /><a href="javascript:;" onclick="copyCanvas()">copy Canvas</a>
+    <br /><a id="download" download="acuvue.png" onclick="downloadCanvas(this)">download Canvas</a>
+    <br /><a href="https://eligrey.com/demos/FileSaver.js/" target="_blank">test</a>
+    <br />
+    <br /><a href="javascript:;" onclick="$('#bg').toggle();">logo toggle</a>
+    <br /><a href="javascript:;" onclick="uploadCanvas()">upload to S3</a>
+    <br />
+    <br /><a href="instagram://app">instagram://app</a>
+    <br /><a href="instagram://user?username=acuvuekr">instagram://user?username=acuvuekr</a>
+    <br /><a href="instagram://tag?name=acuvue">instagram://tag?name=acuvue</a>
+
+    <script>
+
+    $(window).load(function(){
+        hammerSetting();
+    });
+
+    var test;
+
+      function readURL2(event){
+        		 loadImage(event.target.files[0],
+       			        function (obj) {
+
+                      var resizedCanvas = document.createElement("canvas");
+                      var resizedContext = resizedCanvas.getContext("2d");
+                      var context = obj.getContext("2d");
+                      var width = obj.width;
+                      var height = obj.height;
+
+                      while($(document).width()*2<width){ width = width/2; height = height/2;}
+
+                      resizedCanvas.width = width;
+                      resizedCanvas.height = height;
+
+                      resizedContext.drawImage(obj, 0, 0, width, height);
+                      var myResizedData = resizedCanvas.toDataURL();
+
+        			 		      $('#uploadImage').attr('src', myResizedData);
+                        $("#stage").css('transform', 'translateX(0px) translateY(0px)');
+                        currentScale = 1;
+                        liveScale = 1;
+                        currentRotation = 0;
+                        deltaX = 0;
+                        deltaY = 0;
+       			        }
+                    , {orientation:true} // Options
+       			  );
+        	}
+
+        function readURL(event) {
+            var getImagePath = URL.createObjectURL(event.target.files[0]);
+            $('#uploadImage').attr('src', getImagePath);
+/*
+            $("#stage").css('transform', 'translateX(0px) translateY(0px)');
+            currentScale = 1;
+            liveScale = 1;
+            currentRotation = 0;
+            deltaX = 0;
+            deltaY = 0;
+*/
+        }
+
+        function hammerSetting(){
+
+        // get a reference to an element
+        var stage = document.getElementById('stage');
+        var bg = document.getElementById('bg');
+        $stage = jQuery(stage);
+
+        // create a manager for that element
+        //var manager = new Hammer.Manager(stage);
+        var manager = new Hammer.Manager(bg);
+
+        // create recognizers
+        var Pan = new Hammer.Pan();
+        var Rotate = new Hammer.Rotate();
+        var Pinch = new Hammer.Pinch();
+
+        // use them together
+        Rotate.recognizeWith([Pan]);
+        Pinch.recognizeWith([Rotate, Pan]);
+
+        // add the recognizers
+        manager.add(Pan);
+        manager.add(Rotate);
+        manager.add(Pinch);
+
+        // subscribe to events
+        var liveScale = 1;
+        var currentRotation = 0;
+        manager.on('rotatemove', function (e) {
+            // do something cool
+            var rotation = currentRotation + Math.round(liveScale * e.rotation);
+            $.Velocity.hook($stage, 'rotateZ', rotation + 'deg');
+        });
+        manager.on('rotateend', function (e) {
+            // cache the rotation
+            currentRotation += Math.round(e.rotation);
+        });
+
+        var deltaX = 0;
+        var deltaY = 0;
+        manager.on('panmove', function (e) {
+            // do something cool
+            var dX = deltaX + (e.deltaX);
+            var dY = deltaY + (e.deltaY);
+            $.Velocity.hook($stage, 'translateX', dX + 'px');
+            $.Velocity.hook($stage, 'translateY', dY + 'px');
+        });
+        manager.on('panend', function (e) {
+            deltaX = deltaX + e.deltaX;
+            deltaY = deltaY + e.deltaY;
+        });
+
+        // subscribe to events
+        var currentScale = 1;
+        function getRelativeScale(scale) {
+            return scale * currentScale;
+        }
+        manager.on('pinchmove', function (e) {
+            // do something cool
+            var scale = getRelativeScale(e.scale);
+            $.Velocity.hook($stage, 'scale', scale);
+        });
+        manager.on('pinchend', function (e) {
+            // cache the scale
+            currentScale = getRelativeScale(e.scale);
+            liveScale = currentScale;
+        });
+      }
+
+        function copyCanvas() {
+        	$('canvas').remove();
+          html2canvas(document.getElementById('divCanvas'), {
+            allowTaint: true,
+            onrendered: function (canvas) {
+                document.body.appendChild(canvas);
+                var n = $(document).height();
+                $('html, body').animate({ scrollTop: n }, 1000);
+            }
+          });
+        }
+
+        function downloadCanvas(obj) {
+            html2canvas(document.getElementById('divCanvas'), {
+                allowTaint: true,
+                onrendered: function (canvas) {
+                    var lnk = document.createElement('a');//, e;
+                    lnk.download = "canvas.png";
+                    lnk.href = canvas.toDataURL('image/png');
+                    if(navigator.userAgent.indexOf("ip")>-1)
+                      lnk.target = "_blank"; //ios만.
+
+                    if (document.createEvent) {
+                        e = document.createEvent("MouseEvents");
+                        e.initMouseEvent("click", true, true, window,
+                                         0, 0, 0, 0, 0, false, false, false,
+                                         false, 0, null);
+                        lnk.dispatchEvent(e);
+                    } else if (lnk.fireEvent) {
+                        lnk.fireEvent("onclick");
+                    }
+                }
+            });
+        }
+
+        function uploadCanvas() {
+
+            html2canvas(document.getElementById('divCanvas'), {
+                allowTaint: true,
+                onrendered: function (canvas) {
+
+                    $.ajax({
+                        url: '/eventPromotion/201709VITAInstaCanvas/save', dataType: 'json', type: 'POST', data: { img: canvas.toDataURL('image/png') }
+                    })
+                    .always(function (obj) {
+                        console.log('always : ' + obj);
+                    })
+                    .done(function (obj) {
+                        console.log('done : ' + obj);
+                    })
+                    .fail(function (jqXHR, textStatus) {
+                        console.log('fail : ' + textStatus);
+                    });
+
+                }
+            });
+        }
+
+    </script>
+
+    <style>
+        a {
+            background-color: #990099;
+            color: #fefefe;
+            font-size: 20px;
+            line-height: 2;
+        }
+
+        #divCanvas {
+            min-height: initial;
+        }
+
+        .stage {
+            position: absolute;
+        }
+
+            .stage img {
+                max-width: 100vw;
+                /*max-height: 100vw;*/
+            }
+
+        .device-screen {
+            background: #bee2ea;
+            height: 100vw;
+            position: relative;
+            /*perspective: 100vw;*/
+        }
+
+        .device-screen-wrapper {
+            overflow: hidden;
+            width: 100vw;
+            height: 100vw;
+        }
+
+        .acuvue-bg {
+            position: relative;
+            top: -115vw;
+            width: 100vw;
+        }
+
+        .acuvue-bg-text {
+            padding:0 0 0 0 !important;
+            position: relative;
+            top: -40vw;
+            width: 100vw;
+            background-color:transparent;
+            text-align:center;
+            border:none !important;
+            font-size:10vw !important;
+            color:white;
+        }
+    </style>
+
+</body>
+</html>
